@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <math.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -115,6 +116,22 @@ typedef struct
 	uint32_t RESERVED4;
 	volatile uint32_t OR2;
 } GPTim2_3;
+
+typedef struct
+{
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	uint32_t RESERVED0;
+	volatile uint32_t DIER;
+	volatile uint32_t SR;
+	volatile uint32_t EGR;
+	uint32_t RESERVED1;
+	uint32_t RESERVED2;
+	uint32_t RESERVED3;
+	volatile uint32_t CNT;
+	volatile uint32_t PSC;
+	volatile uint32_t ARR;
+} GPTim6_7;
 
 typedef struct
 {
@@ -223,6 +240,7 @@ typedef struct
 #define RCC_BASE   (AHB1_BASE + 0x1000UL)
 #define PWR_BASE   (APB1_BASE + 0x7000UL)
 #define FLASH_BASE (AHB1_BASE + 0x2000UL)
+#define TIM6_BASE  (APB1_BASE + 0x1000UL)
 
 #define GPIOA ((Perph*) GPIOA_BASE)
 #define GPIOB ((Perph*) GPIOB_BASE)
@@ -237,6 +255,7 @@ typedef struct
 #define PWR   ((Power*) PWR_BASE)
 #define FLASH ((Flash*) FLASH_BASE)
 #define TIM2  ((GPTim2_3*) APB1_BASE)
+#define TIM6  ((GPTim6_7*) TIM6_BASE)
 
 #define GPIO_MODE_INPUT     ((uint32_t) 0x00)
 #define GPIO_MODE_OUTPUT    ((uint32_t) 0x01)
@@ -320,10 +339,15 @@ typedef struct
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define TIM6_START()		(TIM6->CR1 |= (0x1UL << 0))
+#define POW(X, Y)			((uint32_t) pow((double) X, (double) Y))
+#define DIGIT(COUNT, DIG)	(((COUNT - COUNT%POW(10.0, DIG - 1))/POW(10.0, DIG - 1))%10)
+
 #define GPIOB_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 1))
 #define GPIOE_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 4))
 #define GPIOG_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 6))
 #define TIM2_CLK_ENABLE()   		(RCC->APB1ENR1 |= 0x1UL)
+#define TIM6_CLK_ENABLE()   		(RCC->APB1ENR1 |= (0x1UL << 4))
 #define SYSCFG_CLK_ENABLE() 		(RCC->APB2ENR |= (0x1UL << 0))
 #define PWR_CLK_ENABLE() 			(RCC->APB1ENR1 |= (0x1UL << 28))
 
@@ -337,6 +361,8 @@ typedef struct
 
 /* USER CODE BEGIN PV */
 volatile uint32_t glTick = 0;
+uint32_t count = 0;
+bool wait = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -380,10 +406,7 @@ int main(void)
 	digits[9] = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 5)|(1 << 6);
 
 	uint32_t tickstart;
-	uint32_t delay = 1000/speed;
-	bool wait = false;
-	bool pressed = false;
-	int count = 0;
+	uint32_t digit = 4;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -411,25 +434,34 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  pressed = !joystickReadOK();
 	  if(!wait)
 	  {
-		  wait = !wait;
-	      tickstart = GetTick();
+		  wait = true;
+		  tickstart = GetTick();
+		  GPIO_WritePin(GPIOG, *(digits + DIGIT(count, 5 - digit)*sizeof(uint16_t)/2), 0x1U);
+		  GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x1U);
+		  TIM6_START();
 	  }
 	  else
 	  {
-		  show(count, &digits);
-		  if(GetTick()-tickstart >= delay)
-	      {
-			  wait = !wait;
-	  	      count = (pressed)?(count+9999)%10000:(count+1)%10000;
-	      }
+		  if(GetTick()-tickstart >= 5)
+		  {
+			  wait = false;
+			  GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
+			  GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x0U);
+			  digit--;
+		  }
 	  }
+
+	  if(digit < 1)
+	  {
+		  digit = 4;
+	  }
+  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+
   /* USER CODE END 3 */
 }
 
@@ -482,8 +514,18 @@ void Tim_Init(Tim_InitStruct* initstruct)
 	TIM2->ARR = initstruct->Reload;
 	TIM2->DIER |= TIM2_DIER_UIE;
 
-	NVIC_SetPriority(TIM2_IRQn, 0x0); // Enable the NVIC interrupt for TIM2.
+	NVIC_SetPriority(TIM2_IRQn, 0x0);
 	NVIC_EnableIRQ(TIM2_IRQn);
+
+	TIM6_CLK_ENABLE();
+	TIM6->CR1 |= (0x1UL << 3);
+	TIM6->DIER |= (0x1UL << 0);
+	TIM6->PSC |= ((uint32_t) 4000);
+	TIM6->ARR &= 0x0UL;
+	TIM6->ARR |= ((uint32_t) 1000/speed);
+
+	NVIC_SetPriority(TIM6_DAC_IRQn, 0x1);
+	NVIC_EnableIRQ(TIM6_DAC_IRQn);
 
 	TIM2->EGR |= TIM_EGR_UG;
 	TIM2->CR1 |= initstruct->State;
@@ -635,6 +677,15 @@ void TIM2_IRQHandler()
 {
 	glTick++;
 	TIM2->SR &= ~(0x1UL << 0);
+}
+
+void TIM6_DAC_IRQHandler()
+{
+	wait = false;
+	GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
+	GPIO_WritePin(GPIOB, (uint16_t) 0x111100U, 0x0U);
+	count = (!joystickReadOK())?(count+9999)%10000:(count+1)%10000;
+	TIM6->SR &= ~(0x1UL << 0);
 }
 /* USER CODE END 4 */
 
