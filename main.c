@@ -376,7 +376,6 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct);
 void GPIO_Config();
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin);
 void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate);
-void show(int count, uint16_t* digits);
 uint32_t joystickReadOK();
 uint32_t GetTick();
 /* USER CODE END PFP */
@@ -638,28 +637,6 @@ void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
 	if(pinstate == 0x1U)
 	{
 		perph->ODR |= pin;
-	}
-}
-
-void show(int count, uint16_t* digits)
-{
-	bool wait = false;
-	for(int digit = 4; digit > 0; digit--)
-	{
-		wait = !wait;
-		uint32_t tickstart = GetTick();
-		GPIO_WritePin(GPIOG, *(digits + (count%10)*sizeof(uint16_t)/2), 0x1U);
-		GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x1U);
-		count = (count - count%10)/10;
-		while(wait)
-		{
-			if(GetTick()-tickstart >= 5)
-			{
-				wait = !wait;
-				GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
-				GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x0U);
-			}
-		}
 	}
 }
 
