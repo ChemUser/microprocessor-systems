@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "uart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -172,6 +173,21 @@ typedef struct
 
 typedef struct
 {
+	volatile uint32_t LPUART_CR1;
+	volatile uint32_t LPUART_CR2;
+	volatile uint32_t LPUART_CR3;
+	volatile uint32_t LPUART_BRR;
+	uint32_t RESERVED0;
+	uint32_t RESERVED1;
+	volatile uint32_t LPUART_RQR;
+	volatile uint32_t LPUART_ISR;
+	volatile uint32_t LPUART_ICR;
+	volatile uint32_t LPUART_RDR;
+	volatile uint32_t LPUART_TDR;
+} LPUART;
+
+typedef struct
+{
 	uint32_t Pin;
 	uint32_t Mode;
 	uint32_t Speed;
@@ -211,32 +227,34 @@ typedef struct
 #define AHB1_BASE (APB1_BASE + 0x00020000UL)
 #define AHB2_BASE (APB1_BASE + 0x08000000UL)
 
-#define GPIOA_BASE (AHB2_BASE + 0x0000UL)
-#define GPIOB_BASE (AHB2_BASE + 0x0400UL)
-#define GPIOC_BASE (AHB2_BASE + 0x0800UL)
-#define GPIOD_BASE (AHB2_BASE + 0x0C00UL)
-#define GPIOE_BASE (AHB2_BASE + 0x1000UL)
-#define GPIOF_BASE (AHB2_BASE + 0x1400UL)
-#define GPIOG_BASE (AHB2_BASE + 0x1800UL)
-#define GPIOH_BASE (AHB2_BASE + 0x1C00UL)
-#define GPIOI_BASE (AHB2_BASE + 0x2000UL)
-#define RCC_BASE   (AHB1_BASE + 0x1000UL)
-#define PWR_BASE   (APB1_BASE + 0x7000UL)
-#define FLASH_BASE (AHB1_BASE + 0x2000UL)
+#define GPIOA_BASE 	(AHB2_BASE + 0x0000UL)
+#define GPIOB_BASE 	(AHB2_BASE + 0x0400UL)
+#define GPIOC_BASE 	(AHB2_BASE + 0x0800UL)
+#define GPIOD_BASE 	(AHB2_BASE + 0x0C00UL)
+#define GPIOE_BASE 	(AHB2_BASE + 0x1000UL)
+#define GPIOF_BASE 	(AHB2_BASE + 0x1400UL)
+#define GPIOG_BASE 	(AHB2_BASE + 0x1800UL)
+#define GPIOH_BASE 	(AHB2_BASE + 0x1C00UL)
+#define GPIOI_BASE 	(AHB2_BASE + 0x2000UL)
+#define RCC_BASE   	(AHB1_BASE + 0x1000UL)
+#define PWR_BASE   	(APB1_BASE + 0x7000UL)
+#define FLASH_BASE 	(AHB1_BASE + 0x2000UL)
+#define LPUART_BASE (APB1_BASE + 0x8000UL)
 
-#define GPIOA ((Perph*) GPIOA_BASE)
-#define GPIOB ((Perph*) GPIOB_BASE)
-#define GPIOC ((Perph*) GPIOC_BASE)
-#define GPIOD ((Perph*) GPIOD_BASE)
-#define GPIOE ((Perph*) GPIOE_BASE)
-#define GPIOF ((Perph*) GPIOF_BASE)
-#define GPIOG ((Perph*) GPIOG_BASE)
-#define GPIOH ((Perph*) GPIOH_BASE)
-#define GPIOI ((Perph*) GPIOI_BASE)
-#define RCC   ((Clock*) RCC_BASE)
-#define PWR   ((Power*) PWR_BASE)
-#define FLASH ((Flash*) FLASH_BASE)
-#define TIM2  ((GPTim2_3*) APB1_BASE)
+#define GPIOA 	((Perph*) GPIOA_BASE)
+#define GPIOB 	((Perph*) GPIOB_BASE)
+#define GPIOC 	((Perph*) GPIOC_BASE)
+#define GPIOD 	((Perph*) GPIOD_BASE)
+#define GPIOE 	((Perph*) GPIOE_BASE)
+#define GPIOF 	((Perph*) GPIOF_BASE)
+#define GPIOG 	((Perph*) GPIOG_BASE)
+#define GPIOH 	((Perph*) GPIOH_BASE)
+#define GPIOI 	((Perph*) GPIOI_BASE)
+#define RCC   	((Clock*) RCC_BASE)
+#define PWR   	((Power*) PWR_BASE)
+#define FLASH 	((Flash*) FLASH_BASE)
+#define TIM2  	((GPTim2_3*) APB1_BASE)
+#define LPUART1 ((LPUART*) LPUART_BASE)
 
 #define GPIO_MODE_INPUT     ((uint32_t) 0x00)
 #define GPIO_MODE_OUTPUT    ((uint32_t) 0x01)
@@ -321,8 +339,6 @@ typedef struct
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define GPIOB_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 1))
-#define GPIOE_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 4))
-#define GPIOG_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 6))
 #define TIM2_CLK_ENABLE()   		(RCC->APB1ENR1 |= 0x1UL)
 #define SYSCFG_CLK_ENABLE() 		(RCC->APB2ENR |= (0x1UL << 0))
 #define PWR_CLK_ENABLE() 			(RCC->APB1ENR1 |= (0x1UL << 28))
@@ -350,8 +366,6 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct);
 void GPIO_Config();
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin);
 void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate);
-void show(int count, uint16_t* digits);
-uint32_t joystickReadOK();
 uint32_t GetTick();
 /* USER CODE END PFP */
 
@@ -367,23 +381,7 @@ uint32_t GetTick();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	uint16_t digits[10];
-	digits[0] = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 4)|(1 << 5);
-	digits[1] = (1 << 1)|(1 << 2);
-	digits[2] = (1 << 0)|(1 << 1)|(1 << 3)|(1 << 4)|(1 << 6);
-	digits[3] = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 6);
-	digits[4] = (1 << 1)|(1 << 2)|(1 << 5)|(1 << 6);
-	digits[5] = (1 << 0)|(1 << 2)|(1 << 3)|(1 << 5)|(1 << 6);
-	digits[6] = (1 << 0)|(1 << 2)|(1 << 3)|(1 << 4)|(1 << 5)|(1 << 6);
-	digits[7] = (1 << 0)|(1 << 1)|(1 << 2);
-	digits[8] = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 4)|(1 << 5)|(1 << 6);
-	digits[9] = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 5)|(1 << 6);
 
-	uint32_t tickstart;
-	uint32_t delay = 1000/speed;
-	bool wait = false;
-	bool pressed = false;
-	int count = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -400,6 +398,7 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
   GPIO_Config();
+  LPUART_init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -411,21 +410,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  pressed = !joystickReadOK();
-	  if(!wait)
-	  {
-		  wait = !wait;
-	      tickstart = GetTick();
-	  }
-	  else
-	  {
-		  show(count, &digits);
-		  if(GetTick()-tickstart >= delay)
-	      {
-			  wait = !wait;
-	  	      count = (pressed)?(count+9999)%10000:(count+1)%10000;
-	      }
-	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -529,6 +514,7 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct)
 			perph->OTYPER = (perph->OTYPER & ~(0x1UL << pos)) | ((initstruct->Mode & 0x01UL) << pos);
 			perph->OSPEEDR = (perph->OSPEEDR & ~(0x3UL << (2 * pos))) | (initstruct->Speed << (2 * pos));
 			perph->PUPDR = (perph->PUPDR & ~(0x3UL << (2 * pos))) | (initstruct->Pull << (2 * pos));
+			perph->AFR = 1;
 		}
 		pos++;
 	}
@@ -539,9 +525,7 @@ void GPIO_Config()
 	PWR_VDDIO2_ENABLE();
 	Pin_InitStruct Init_Struct = {0};
 
-	GPIOE_CLK_ENABLE();
 	GPIOB_CLK_ENABLE();
-	GPIOG_CLK_ENABLE();
 
 	Init_Struct.Pin = (1 << 2)|(1 << 3)|(1 << 4)|(1 << 5);
 	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -597,33 +581,6 @@ void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
 	{
 		perph->ODR |= pin;
 	}
-}
-
-void show(int count, uint16_t* digits)
-{
-	bool wait = false;
-	for(int digit = 4; digit > 0; digit--)
-	{
-		wait = !wait;
-		uint32_t tickstart = GetTick();
-		GPIO_WritePin(GPIOG, *(digits + (count%10)*sizeof(uint16_t)/2), 0x1U);
-		GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x1U);
-		count = (count - count%10)/10;
-		while(wait)
-		{
-			if(GetTick()-tickstart >= 5)
-			{
-				wait = !wait;
-				GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
-				GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x0U);
-			}
-		}
-	}
-}
-
-uint32_t joystickReadOK()
-{
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
 }
 
 uint32_t GetTick()
