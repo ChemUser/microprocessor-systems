@@ -173,21 +173,6 @@ typedef struct
 
 typedef struct
 {
-	volatile uint32_t LPUART_CR1;
-	volatile uint32_t LPUART_CR2;
-	volatile uint32_t LPUART_CR3;
-	volatile uint32_t LPUART_BRR;
-	uint32_t RESERVED0;
-	uint32_t RESERVED1;
-	volatile uint32_t LPUART_RQR;
-	volatile uint32_t LPUART_ISR;
-	volatile uint32_t LPUART_ICR;
-	volatile uint32_t LPUART_RDR;
-	volatile uint32_t LPUART_TDR;
-} LPUART;
-
-typedef struct
-{
 	uint32_t Pin;
 	uint32_t Mode;
 	uint32_t Speed;
@@ -239,7 +224,6 @@ typedef struct
 #define RCC_BASE   	(AHB1_BASE + 0x1000UL)
 #define PWR_BASE   	(APB1_BASE + 0x7000UL)
 #define FLASH_BASE 	(AHB1_BASE + 0x2000UL)
-#define LPUART_BASE (APB1_BASE + 0x8000UL)
 
 #define GPIOA 	((Perph*) GPIOA_BASE)
 #define GPIOB 	((Perph*) GPIOB_BASE)
@@ -254,7 +238,6 @@ typedef struct
 #define PWR   	((Power*) PWR_BASE)
 #define FLASH 	((Flash*) FLASH_BASE)
 #define TIM2  	((GPTim2_3*) APB1_BASE)
-#define LPUART1 ((LPUART*) LPUART_BASE)
 
 #define GPIO_MODE_INPUT     ((uint32_t) 0x00)
 #define GPIO_MODE_OUTPUT    ((uint32_t) 0x01)
@@ -264,6 +247,8 @@ typedef struct
 #define GPIO_MODE_OD        ((uint32_t) 0x01)
 #define GPIO_MODE_OUTPUT_PP ((GPIO_MODE_OUTPUT << 1) | GPIO_MODE_PP)
 #define GPIO_MODE_OUTPUT_OD ((GPIO_MODE_OUTPUT << 1) | GPIO_MODE_OD)
+#define GPIO_MODE_ALTER_PP ((GPIO_MODE_ALTER << 1) | GPIO_MODE_PP)
+#define GPIO_MODE_ALTER_OD ((GPIO_MODE_ALTER << 1) | GPIO_MODE_OD)
 
 #define GPIO_SPEED_LOW    ((uint32_t) 0x00)
 #define GPIO_SPEED_MEDIUM ((uint32_t) 0x01)
@@ -329,6 +314,9 @@ typedef struct
 #define DATA_CACHE_ENABLE		 0x1U
 #define PREFETCH_ENABLE			 0x0U
 
+#define LPUART1_SRC_PCLK	(0x0UL << 10)
+#define LPUART1_SRC_SYSCLK 	(0x1UL << 10)
+
 #define NVIC_PRIORITYGROUP_0         ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority, 4 bits for subpriority */
 #define NVIC_PRIORITYGROUP_1         ((uint32_t)0x00000006) /*!< 1 bit  for pre-emption priority, 3 bits for subpriority */
 #define NVIC_PRIORITYGROUP_2         ((uint32_t)0x00000005) /*!< 2 bits for pre-emption priority, 2 bits for subpriority */
@@ -342,6 +330,7 @@ typedef struct
 #define TIM2_CLK_ENABLE()   		(RCC->APB1ENR1 |= 0x1UL)
 #define SYSCFG_CLK_ENABLE() 		(RCC->APB2ENR |= (0x1UL << 0))
 #define PWR_CLK_ENABLE() 			(RCC->APB1ENR1 |= (0x1UL << 28))
+#define LPUART1_CLK_ENABLE()		(RCC->APB1ENR2 |= 0x1UL)
 
 #define PWR_VDDIO2_ENABLE() 			  (PWR->CR2 |= (0x1UL << 9))
 #define FLASH_INSTRUCTION_CACHE_DISABLE() (FLASH->ACR &= ~(0x1UL << 9))
@@ -398,19 +387,40 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
   GPIO_Config();
+  RCC->CCIPR |= LPUART1_SRC_PCLK;
+  LPUART1_CLK_ENABLE();
   LPUART_init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-
+  for(unsigned char i = 97; i < 123; i++)
+  {
+	  LPUART_SendChar(i);
+  }
+  for(unsigned char i = 65; i < 91; i++)
+  {
+	  LPUART_SendChar(i);
+  }
+  LPUART_SendChar('\n');
+  LPUART_SendString("Welcome home - Arseni Skrabneu\n\0");
+  unsigned char buff;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  LPUART_ReceiveChar(&buff);
+	  if(buff >= 65 && buff <= 90)
+	  {
+		  buff += 32;
+	  }
+	  if(buff >= 97 && buff <= 122)
+	  {
+		  buff -= 32;
+	  }
+	  LPUART_SendChar(buff);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -514,7 +524,14 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct)
 			perph->OTYPER = (perph->OTYPER & ~(0x1UL << pos)) | ((initstruct->Mode & 0x01UL) << pos);
 			perph->OSPEEDR = (perph->OSPEEDR & ~(0x3UL << (2 * pos))) | (initstruct->Speed << (2 * pos));
 			perph->PUPDR = (perph->PUPDR & ~(0x3UL << (2 * pos))) | (initstruct->Pull << (2 * pos));
-			perph->AFR = 1;
+			if(pos < 8)
+			{
+				perph->AFR[0] |= (initstruct->Alternate << 4 * pos);
+			}
+			else
+			{
+				perph->AFR[1] |= (initstruct->Alternate << 4 * pos);
+			}
 		}
 		pos++;
 	}
@@ -527,19 +544,11 @@ void GPIO_Config()
 
 	GPIOB_CLK_ENABLE();
 
-	Init_Struct.Pin = (1 << 2)|(1 << 3)|(1 << 4)|(1 << 5);
-	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
+	Init_Struct.Pin = (1 << 10)|(1 << 11)|(1 << 12)|(1 << 13);
+	Init_Struct.Mode = GPIO_MODE_ALTER_PP;
+	Init_Struct.Alternate = 0x1000UL;
 
 	GPIO_Init(GPIOB, &Init_Struct);
-
-	Init_Struct.Pin = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 4)|(1 << 5)|(1 << 6)|(1 << 9);
-
-	GPIO_Init(GPIOG, &Init_Struct);
-
-	Init_Struct.Pin = (1 << 15);
-	Init_Struct.Mode = GPIO_MODE_INPUT;
-
-	GPIO_Init(GPIOE, &Init_Struct);
 }
 
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin)
