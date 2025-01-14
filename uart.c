@@ -14,13 +14,20 @@ typedef struct
 	volatile uint32_t CR2;
 	volatile uint32_t CR3;
 	volatile uint32_t BRR;
-	uint32_t RESERVED0;
-	uint32_t RESERVED1;
-	volatile uint32_t RQR;
+	volatile uint32_t RESERVED0;
+	volatile uint32_t RESERVED1;
+	volatile uint8_t RQR;
+	volatile uint8_t RESERVED2;
+	volatile uint16_t RESERVED3;
 	volatile uint32_t ISR;
 	volatile uint32_t ICR;
-	volatile uint32_t RDR;
-	volatile uint32_t TDR;
+	volatile uint8_t RDR;
+	volatile uint8_t RESERVED4;
+	volatile uint16_t RESERVED5;
+	volatile uint8_t TDR;
+	volatile uint8_t RESERVED6;
+	volatile uint16_t RESERVED7;
+
 } LPUART;
 
 #define APB1_BASE 0x40000000UL
@@ -45,40 +52,38 @@ int LPUART_init(void)
 {
 	LPUART1->CR1 |= WORD_8B;
 	LPUART1->CR2 |= STOP_1B;
-	LPUART1->BRR |= (uint32_t) 8889;
+	LPUART1->BRR = (256 * 4000000)/115200;
 	LPUART1->CR1 |= 0x1UL;
+	LPUART1->CR1 |= (0x1UL << 3);
+	LPUART1->CR1 |= (0x1UL << 2);
+	return 0;
 }
 
 //	Send single character
-int LPUART_SendChar(unsigned char data)
+int LPUART_SendChar(char data)
 {
-	LPUART1->CR1 |= (0x1UL << 3);
 	while(TXE == 0){continue;}
-	LPUART1->TDR |= (uint32_t) data;
+	LPUART1->TDR = data;
 	while(TC == 0){continue;}
-	LPUART1->CR1 &= ~(0x1UL << 3);
+	return 0;
 }
 
 //	Receive single character
-int LPUART_ReceiveChar(unsigned char* data)
+int LPUART_ReceiveChar(char* data)
 {
-	LPUART1->CR1 |= (0x1UL << 2);
 	while(RXNE != 1){continue;}
-	*data = (uint8_t) LPUART1->RDR;
-	LPUART1->CR1 &= ~(0x1UL << 2);
+	*data = LPUART1->RDR;
+	return 0;
 }
 
 //	Send string
-int LPUART_SendString(unsigned char* data) //Every string should be null-terminated
+int LPUART_SendString(char* data) //Every string should be null-terminated
 {
-	LPUART1->CR1 |= (0x1UL << 3);
-	unsigned char pos = 0;
+	char pos = 0;
 	while(*(data + pos) != '\0')
 	{
-		while(TXE == 0){continue;}
-		LPUART1->TDR |= (uint32_t) data;
-		while(TC == 0){continue;}
+		LPUART_SendChar(*(data + pos));
 		pos++;
 	}
-	LPUART1->CR1 &= ~(0x1UL << 3);
+	return 0;
 }

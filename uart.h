@@ -14,12 +14,12 @@
 int LPUART_init(void);
 
 //	Send single character
-int LPUART_SendChar(unsigned char data);
+int LPUART_SendChar(char data);
 
 //	Receive single character
-int LPUART_ReceiveChar(unsigned char* data);
+int LPUART_ReceiveChar(char* data);
 
 //	Send string
-int LPUART_SendString(unsigned char* data);
+int LPUART_SendString(char* data);
 
 #endif /* SRC_UART_H_ */

@@ -327,6 +327,7 @@ typedef struct
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define GPIOB_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 1))
+#define GPIOC_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 2))
 #define TIM2_CLK_ENABLE()   		(RCC->APB1ENR1 |= 0x1UL)
 #define SYSCFG_CLK_ENABLE() 		(RCC->APB2ENR |= (0x1UL << 0))
 #define PWR_CLK_ENABLE() 			(RCC->APB1ENR1 |= (0x1UL << 28))
@@ -394,17 +395,17 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-  for(unsigned char i = 97; i < 123; i++)
+  for(char i = 97; i < 123; i++)
   {
 	  LPUART_SendChar(i);
   }
-  for(unsigned char i = 65; i < 91; i++)
+  for(char i = 65; i < 91; i++)
   {
 	  LPUART_SendChar(i);
   }
-  LPUART_SendChar('\n');
-  LPUART_SendString("Welcome home - Arseni Skrabneu\n\0");
-  unsigned char buff;
+  LPUART_SendString("\n\r\0");
+  LPUART_SendString("Welcome home - Arseni Skrabneu\n\r\0");
+  char buff;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -416,7 +417,7 @@ int main(void)
 	  {
 		  buff += 32;
 	  }
-	  if(buff >= 97 && buff <= 122)
+	  else if(buff >= 97 && buff <= 122)
 	  {
 		  buff -= 32;
 	  }
@@ -530,7 +531,7 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct)
 			}
 			else
 			{
-				perph->AFR[1] |= (initstruct->Alternate << 4 * pos);
+				perph->AFR[1] |= (initstruct->Alternate << 4 * (pos - 8));
 			}
 		}
 		pos++;
@@ -544,11 +545,19 @@ void GPIO_Config()
 
 	GPIOB_CLK_ENABLE();
 
-	Init_Struct.Pin = (1 << 10)|(1 << 11)|(1 << 12)|(1 << 13);
+	Init_Struct.Pin = /*(1 << 10)|(1 << 11)|*/(1 << 12)|(1 << 13);
 	Init_Struct.Mode = GPIO_MODE_ALTER_PP;
-	Init_Struct.Alternate = 0x1000UL;
+	Init_Struct.Alternate = 0x8UL;
 
 	GPIO_Init(GPIOB, &Init_Struct);
+
+	GPIOC_CLK_ENABLE();
+
+	Init_Struct.Pin = (1 << 0)|(1 << 1);
+	Init_Struct.Mode = GPIO_MODE_ALTER_PP;
+	Init_Struct.Alternate = 0x8UL;
+
+	GPIO_Init(GPIOC, &Init_Struct);
 }
 
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin)
