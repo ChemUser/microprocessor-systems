@@ -28,6 +28,22 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 typedef enum {false, true} bool;
+typedef enum {Menu, LED, LED7, Joy, LPUART} Level;
+typedef enum {
+	HELP,
+	LED,
+	LED7,
+	Joy,
+	LPUART,
+	UP,
+	Set,
+	Clear,
+	Blink,
+	Toggle,
+	Display,
+	Read,
+	Status} Command;
+
 typedef struct
 {
   volatile uint32_t MODER;       /*!< GPIO port mode register,               Address offset: 0x00      */
@@ -42,6 +58,12 @@ typedef struct
   volatile uint32_t BRR;         /*!< GPIO Bit Reset register,               Address offset: 0x28      */
 
 } Perph;
+
+typedef struct
+{
+	Perph *perph;
+	uint16_t number;
+} Led;
 
 typedef struct
 {
@@ -328,6 +350,9 @@ typedef struct
 /* USER CODE BEGIN PM */
 #define GPIOB_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 1))
 #define GPIOC_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 2))
+#define GPIOD_CLK_ENABLE()			(RCC->AHB2ENR |= (0x1UL << 3))
+#define GPIOE_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 4))
+#define GPIOG_CLK_ENABLE()  		(RCC->AHB2ENR |= (0x1UL << 6))
 #define TIM2_CLK_ENABLE()   		(RCC->APB1ENR1 |= 0x1UL)
 #define SYSCFG_CLK_ENABLE() 		(RCC->APB2ENR |= (0x1UL << 0))
 #define PWR_CLK_ENABLE() 			(RCC->APB1ENR1 |= (0x1UL << 28))
@@ -342,6 +367,7 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+Level level = Menu;
 volatile uint32_t glTick = 0;
 /* USER CODE END PV */
 
@@ -356,6 +382,17 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct);
 void GPIO_Config();
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin);
 void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate);
+void show(int count, uint16_t* digits);
+uint32_t joystickReadRight();
+uint32_t joystickReadLeft();
+uint32_t joystickReadUp();
+uint32_t joystickReadDown();
+uint32_t joystickReadOK();
+void flush_buffer(char* buff);
+char is_valid(char* buff);
+void execute(char* buff);
+void display_help();
+void case_desensitize(char* string);
 uint32_t GetTick();
 /* USER CODE END PFP */
 
@@ -371,7 +408,23 @@ uint32_t GetTick();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	Led led0 = {.perph = GPIOC, .number = (1 << 6)};
+	Led led1 = {.perph = GPIOC, .number = (1 << 7)};
+	Led led2 = {.perph = GPIOC, .number = (1 << 8)};
+	Led led3 = {.perph = GPIOC, .number = (1 << 9)};
+	Led led4 = {.perph = GPIOE, .number = (1 << 4)};
+	Led led5 = {.perph = GPIOD, .number = (1 << 3)};
+	Led led6 = {.perph = GPIOE, .number = (1 << 5)};
+	Led led7 = {.perph = GPIOE, .number = (1 << 6)};
 
+	Led ledRed = {.perph = GPIOD, .number = (1 << 13)};
+	Led ledGreen = {.perph = GPIOB, .number = (1 << 8)};
+	Led ledBlue = {.perph = GPIOD, .number = (1 << 12)};
+
+	uint32_t tickstart;
+	bool wait = false;
+	char buff[13];
+	char pos = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -395,33 +448,27 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-  for(char i = 97; i < 123; i++)
-  {
-	  LPUART_SendChar(i);
-  }
-  for(char i = 65; i < 91; i++)
-  {
-	  LPUART_SendChar(i);
-  }
-  LPUART_SendString("\n\r\0");
-  LPUART_SendString("Welcome home - Arseni Skrabneu\n\r\0");
-  char buff;
+  LPUART_SendString("Simple menu by Arseni Skrabneu\n\r\0");
+  LPUART_SendString("Write 'help' to obtain more information\n\r>\0");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  LPUART_ReceiveChar(&buff);
-	  if(buff >= 65 && buff <= 90)
-	  {
-		  buff += 32;
-	  }
-	  else if(buff >= 97 && buff <= 122)
-	  {
-		  buff -= 32;
-	  }
-	  LPUART_SendChar(buff);
+	LPUART_ReceiveChar(&buff[pos]);
+	LPUART_SendChar(buff[pos]);
+	pos = (pos + 1)%13;
+
+	if(pos == 0)
+	{
+		flush_buffer();
+	}
+	if(buff[pos] == '\n')
+	{
+		case_desensitize(buff);
+		execute(buff);
+	}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -521,17 +568,20 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct)
 		cur = initstruct->Pin & (1 << pos);
 		if(cur != 0)
 		{
-			perph->MODER = (perph->MODER & ~(0x3UL << (2 * pos))) | (((initstruct->Mode & 0xFFFFFFFEUL) >> 1) << (2 * pos));
+			perph->MODER = (perph->MODER & ~(0x3UL << (2 * pos))) | (((initstruct->Mode & ~(0x1UL)) >> 1) << (2 * pos));
 			perph->OTYPER = (perph->OTYPER & ~(0x1UL << pos)) | ((initstruct->Mode & 0x01UL) << pos);
 			perph->OSPEEDR = (perph->OSPEEDR & ~(0x3UL << (2 * pos))) | (initstruct->Speed << (2 * pos));
 			perph->PUPDR = (perph->PUPDR & ~(0x3UL << (2 * pos))) | (initstruct->Pull << (2 * pos));
-			if(pos < 8)
+			if((initstruct->Mode & ~(0x1UL)) == 0x10UL)
 			{
-				perph->AFR[0] |= (initstruct->Alternate << 4 * pos);
-			}
-			else
-			{
-				perph->AFR[1] |= (initstruct->Alternate << 4 * (pos - 8));
+				if(pos < 8)
+				{
+					perph->AFR[0] |= (initstruct->Alternate << 4 * pos);
+				}
+				else
+				{
+					perph->AFR[1] |= (initstruct->Alternate << 4 * (pos - 8));
+				}
 			}
 		}
 		pos++;
@@ -544,20 +594,62 @@ void GPIO_Config()
 	Pin_InitStruct Init_Struct = {0};
 
 	GPIOB_CLK_ENABLE();
+	GPIOC_CLK_ENABLE();
+	GPIOD_CLK_ENABLE();
+	GPIOE_CLK_ENABLE();
+	GPIOG_CLK_ENABLE();
 
-	Init_Struct.Pin = /*(1 << 10)|(1 << 11)|*/(1 << 12)|(1 << 13);
+	//GPIOB peripheral init start
+	Init_Struct.Pin = (1 << 12)|(1 << 13);
 	Init_Struct.Mode = GPIO_MODE_ALTER_PP;
 	Init_Struct.Alternate = 0x8UL;
 
 	GPIO_Init(GPIOB, &Init_Struct);
 
-	GPIOC_CLK_ENABLE();
+	Init_Struct.Pin = (1 << 2)|(1 << 3)|(1 << 4)|(1 << 5);
+	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
 
+	GPIO_Init(GPIOB, &Init_Struct);
+	//GPIOB peripheral init end
+
+	//GPIOC peripheral init start
 	Init_Struct.Pin = (1 << 0)|(1 << 1);
 	Init_Struct.Mode = GPIO_MODE_ALTER_PP;
 	Init_Struct.Alternate = 0x8UL;
 
 	GPIO_Init(GPIOC, &Init_Struct);
+
+	Init_Struct.Pin = (1 << 6)|(1 << 7)|(1 << 8)|(1 << 9);
+	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
+
+	HAL_GPIO_Init(GPIOC, &User_InitStruct);
+	//GPIOC peripheral init end
+
+	//GPIOD peripheral init start
+	Init_Struct.Pin = (1 << 3)|(1 << 12)|(1 << 13);
+	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
+
+	GPIO_Init(GPIOD, &Init_Struct);
+	//GPIOD peripheral init end
+
+	//GPIOE peripheral init start
+	Init_Struct.Pin = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 15);
+	Init_Struct.Mode = GPIO_MODE_INPUT;
+
+	GPIO_Init(GPIOE, &Init_Struct);
+
+	Init_Struct.Pin = (1 << 4)|(1 << 5)|(1 << 6);
+	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
+
+	GPIO_Init(GPIOE, &Init_Struct);
+	//GPIOE peripheral init end
+
+	//GPIOG peripheral init start
+	Init_Struct.Pin = (1 << 0)|(1 << 1)|(1 << 2)|(1 << 3)|(1 << 4)|(1 << 5)|(1 << 6)|(1 << 9);
+	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
+
+	GPIO_Init(GPIOG, &Init_Struct);
+	//GPIOG peripheral init end
 }
 
 uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin)
@@ -598,6 +690,243 @@ void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
 	if(pinstate == 0x1U)
 	{
 		perph->ODR |= pin;
+	}
+}
+
+void show(int count, uint16_t* digits)
+{
+	bool wait = false;
+	for(int digit = 4; digit > 0; digit--)
+	{
+		wait = !wait;
+		uint32_t tickstart = GetTick();
+		GPIO_WritePin(GPIOG, *(digits + (count%10)*sizeof(uint16_t)/2), 0x1U);
+		GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x1U);
+		count = (count - count%10)/10;
+		while(wait)
+		{
+			if(GetTick()-tickstart >= 5)
+			{
+				wait = !wait;
+				GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
+				GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x0U);
+			}
+		}
+	}
+}
+
+uint32_t joystickReadLeft()
+{
+	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 1));
+}
+
+uint32_t joystickReadRight()
+{
+	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 0));
+}
+
+uint32_t joystickReadUp()
+{
+	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 3));
+}
+
+uint32_t joystickReadDown()
+{
+	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 2));
+}
+
+uint32_t joystickReadOK()
+{
+	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
+}
+
+void display_help()
+{
+	switch(level)
+	{
+		case Menu:
+			LPUART_SendString("Top level\n\r\0");
+			break;
+		case LED:
+			LPUART_SendString("Set <id>		Turn on LED (id: 0-7 or R,G,B)\n\r\0");
+			LPUART_SendString("Clear <id>	Turn off LED (id: 0-7 or R,G,B)\n\r\0");
+			LPUART_SendString("Blink <id>	Blink LED five times (id: 0-7 or R,G,B)\n\r\0");
+			LPUART_SendString("Status <id>	Display on/off status of LED (id: 0-7 or R,G,B)\n\r\0");
+			LPUART_SendString("Toggle <id>	Invert LED state (id: 0-7 or R,G,B)\n\r\0");
+			break;
+		case LED7:
+			LPUART_SendString("Display <val>	Display number from 0 to 9999 on the 7-LED display\n\r\0");
+			LPUART_SendString("Read				Display on the terminal the number from 7-LED display\n\r\0");
+			break;
+		case Joy:
+			LPUART_SendString("Read <id>	Display on the terminal the current state of joystick buttons\n\r\0");
+			LPUART_SendString("				(id: L – left, R – right, U – up, D – down, C - center)\n\r\0");
+			break;
+		case LPUART:
+			LPUART_SendString("Status	Display baudrate, number of databits and parity bits,\n\r\0");
+			LPUART_SendString("			informations read from registers and then calculated baudrate\n\r\0");
+			break;
+	}
+}
+
+void blink()
+{
+
+}
+
+void flush_buffer(char* buff)
+{
+	for(char i = 0; i < sizeof(buff)/sizeof(char); i++)
+	{
+		*(buff + i) = '\0';
+	}
+}
+
+void case_desensitize(char* string)
+{
+	for(char i = 0; i < sizeof(string)/sizeof(char); i++)
+	{
+		if(*(string + i) >= 65 && *(string + i) <= 90)
+		{
+			*(string + i) += 32;
+		}
+	}
+}
+
+char is_function_valid(char* buff)
+{
+	char command, i;
+	char *commands[13] = {
+			"help",
+			"led",
+			"7led",
+			"joy",
+			"lpuart",
+			"up",
+			"set",
+			"clear",
+			"blink",
+			"toggle",
+			"display",
+			"read",
+			"status"
+	};
+	for(char k = 0; k < 13; k++)
+	{
+		command = k;
+		i = 0;
+		while(*(buff + i) != '\n')
+		{
+			if(sizeof(*commands[k])/sizeof(char) < i)
+			{
+				command = -1;
+				break;
+			}
+			if(*(*commands[k] + i) != *(buff + i))
+			{
+				command = -1;
+				break;
+			}
+			i++;
+		}
+		if(command != -1)
+		{
+			return command;
+		}
+	}
+	return -1;
+}
+
+char are_arguments_valid(char* buff)
+{
+
+}
+
+void execute(char* buff)
+{
+	char command;
+	if((command = is_function_valid(buff)) != -1)
+	{
+		switch(level)
+		{
+			case Menu:
+				switch(command)
+				{
+					case HELP:
+						display_help();
+						break;
+					default:
+						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
+						break;
+				}
+				break;
+			case LED:
+				switch(command)
+				{
+					case HELP:
+						display_help();
+						break;
+					case Set:
+						break;
+					case Clear:
+						break;
+					case Blink:
+						break;
+					case Status:
+						break;
+					case Toggle:
+						break;
+					default:
+						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
+						break;
+				}
+				break;
+			case LED7:
+				switch(command)
+				{
+					case HELP:
+						display_help();
+						break;
+					case Display:
+						break;
+					case Read:
+						break;
+					default:
+						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
+						break;
+				}
+				break;
+			case Joy:
+				switch(command)
+				{
+					case HELP:
+						display_help();
+						break;
+					case Read:
+						break;
+					default:
+						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
+						break;
+				}
+				break;
+			case LPUART:
+				switch(command)
+				{
+					case HELP:
+						display_help();
+						break;
+					case Status:
+						break;
+					default:
+						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
+						break;
+				}
+				break;
+		}
+	}
+	else
+	{
+		LPUART_SendString("Is not a valid command! Type \"HELP\" for more information.\n\r\0");
 	}
 }
 
