@@ -43,6 +43,7 @@ typedef enum {
 	Display,
 	Read,
 	Status} Command;
+typedef enum {Right, Left, Up, Down, OK} joyState;
 
 typedef struct
 {
@@ -683,14 +684,28 @@ void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
 		{
 			mask |= (1 << pos);
 		}
-		temp &= 0xFFFEU;
+		temp &= ~(0x1U);
 	}
 	pin &= mask;
 	perph->ODR &= ~pin;
-	if(pinstate == 0x1U)
+	perph->ODR |= pinstate;
+}
+
+void GPIO_TogglePin(Perph* perph, uint16_t pin)
+{
+	uint16_t temp = pin;
+	uint16_t pinstate = 0x0U;
+	int pos = 0;
+	while(temp > 0)
 	{
-		perph->ODR |= pin;
+		while((temp & 0x1U) != 0x1U)
+		{
+			temp = temp >> 1;
+			pos++;
+		}
+		pinstate |= ((GPIO_ReadPin(perph, 1 << pos)^0x1UL) << pos);
 	}
+	GPIO_WritePin(perph, pin, pinstate);
 }
 
 void show(int count, uint16_t* digits)
@@ -715,29 +730,21 @@ void show(int count, uint16_t* digits)
 	}
 }
 
-uint32_t joystickReadLeft()
+uint32_t joystickRead(joyState state)
 {
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 1));
-}
-
-uint32_t joystickReadRight()
-{
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 0));
-}
-
-uint32_t joystickReadUp()
-{
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 3));
-}
-
-uint32_t joystickReadDown()
-{
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 2));
-}
-
-uint32_t joystickReadOK()
-{
-	return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
+	switch(state)
+	{
+		case Right:
+			return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 0));
+		case Left:
+			return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 1));
+		case Up:
+			return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 3));
+		case Down:
+			return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 2));
+		case OK:
+			return GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
+	}
 }
 
 void display_help()
@@ -769,9 +776,62 @@ void display_help()
 	}
 }
 
-void blink()
+void blink(Perph* perph, uint16_t pin)
 {
+	uint32_t tickstart;
+	bool wait = false;
+	for(char i = 0; i < 5; i++)
+	{
+		tickstart = GetTick();
+		wait = true;
+		GPIO_TogglePin(perph, pin);
+		while(wait)
+		{
+			if((GetTick() - tickstart) > (1000/speed))
+			{
+				wait = false;
+				GPIO_TogglePin(perph, pin);
+			}
+		}
+	}
+}
 
+void lpuart_status()
+{
+	uint32_t temp;
+	temp = ((LPUART1->CR1 & (0x1UL << 28) >> 27))|((LPUART1->CR1 & (0x1UL << 12)) >> 12);
+	LPUART_SendString("LPUART status:\n\r\t\0");
+	LPUART_SendString("Baudrate: 115200\n\r\t\0");
+	switch(temp)
+	{
+		case 0x10UL:
+			LPUART_SendString("7 data bits, \0");
+			break;
+		case 0x00UL:
+			LPUART_SendString("8 data bits, \0");
+			break;
+		case 0x01UL:
+			LPUART_SendString("9 data bits, \0");
+			break;
+	}
+	temp = (LPUART1->CR1 & (0x3UL << 9)) >> 9;
+	switch(temp)
+	{
+		case 0x10UL:
+			LPUART_SendString("even parity.\n\r\t\0");
+			break;
+		case 0x11UL:
+			LPUART_SendString("odd parity.\n\r\t\0");
+			break;
+		default:
+			LPUART_SendString("no parity.\n\r\t\0");
+			break;
+	}
+	LPUART_SendString("Transmit register: \"");
+	LPUART_SendChar(LPUART1->TDR);
+	LPUART_SendString("\"\n\r\tReceive register: \"");
+	LPUART_SendChar(LPUART1->RDR);
+	LPUART_SendString("\"\n\r\tCalculated baudrate: ");
 }
 
 void flush_buffer(char* buff)
@@ -793,7 +853,7 @@ void case_desensitize(char* string)
 	}
 }
 
-char is_function_valid(char* buff)
+char retrieve_function(char* buff)
 {
 	char command, i;
 	char *commands[13] = {
@@ -837,16 +897,25 @@ char is_function_valid(char* buff)
 	return -1;
 }
 
-char are_arguments_valid(char* buff)
+char* retrieve_args(char* buff)
 {
-
+	char i = 0;
+	char args[4] = {'\0','\0','\0','\0'};
+	while(*(buff + i) != ' '){i++;}
+	i++;
+	for(char k = i; k < i + 4; k++)
+	{
+		args[k - i] = *(buff + k);
+	}
+	return args;
 }
 
 void execute(char* buff)
 {
 	char command;
-	if((command = is_function_valid(buff)) != -1)
+	if((command = retrieve_function(buff)) != -1)
 	{
+		char* args = retrieve_args(buff);
 		switch(level)
 		{
 			case Menu:
@@ -867,14 +936,22 @@ void execute(char* buff)
 						display_help();
 						break;
 					case Set:
+						switch()
+						{
+
+						}
 						break;
 					case Clear:
+						GPIO_WritePin();
 						break;
 					case Blink:
+						blink();
 						break;
 					case Status:
+						GPIO_ReadPin();
 						break;
 					case Toggle:
+						GPIO_TogglePin();
 						break;
 					default:
 						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
@@ -888,6 +965,7 @@ void execute(char* buff)
 						display_help();
 						break;
 					case Display:
+						show();
 						break;
 					case Read:
 						break;
@@ -903,6 +981,7 @@ void execute(char* buff)
 						display_help();
 						break;
 					case Read:
+						joystickRead();
 						break;
 					default:
 						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
