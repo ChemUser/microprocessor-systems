@@ -22,4 +22,13 @@ int LPUART_ReceiveChar(char* data);
 //	Send string
 int LPUART_SendString(char* data);
 
+/*Print status of the LPUART interface using LPUART
+ * Baudrate: ...
+ * ... data bits, ... parity.
+ * Transmit register: '...'.
+ * Receive register: '...'.
+ * Calculated baudrate: ...
+ */
+void lpuart_status();
+
 #endif /* SRC_UART_H_ */
