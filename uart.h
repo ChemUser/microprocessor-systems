@@ -31,4 +31,6 @@ int LPUART_SendString(char* data);
  */
 void lpuart_status();
 
+void LPUART1_IRQHandler();
+
 #endif /* SRC_UART_H_ */

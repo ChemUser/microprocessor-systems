@@ -42,7 +42,9 @@ typedef enum {
 	Toggle,
 	Display,
 	Read,
-	Status} Command;
+	Status,
+	Invalid
+	} Command;
 
 typedef struct
 {
@@ -64,60 +66,6 @@ typedef struct
 	Perph *perph;
 	uint16_t number;
 } Led;
-
-typedef struct
-{
-	volatile uint32_t CR1;
-	volatile uint32_t CR2;
-	volatile uint32_t CR3;
-	volatile uint32_t CR4;
-	volatile uint32_t SR1;
-	volatile uint32_t SR2;
-	volatile uint32_t SCR;
-	volatile uint32_t PUCRA;
-	volatile uint32_t PDCRA;
-	volatile uint32_t PUCRB;
-	volatile uint32_t PDCRB;
-	volatile uint32_t PUCRC;
-	volatile uint32_t PDCRC;
-	volatile uint32_t PUCRD;
-	volatile uint32_t PDCRD;
-	volatile uint32_t PUCRE;
-	volatile uint32_t PDCRE;
-	volatile uint32_t PUCRF;
-	volatile uint32_t PDCRF;
-	volatile uint32_t PUCRG;
-	volatile uint32_t PDCRG;
-	volatile uint32_t PUCRH;
-	volatile uint32_t PDCRH;
-	volatile uint32_t PUCRI;
-	volatile uint32_t PDCRI;
-} Power;
-
-typedef struct
-{
-	volatile uint32_t ACR;
-	volatile uint32_t PDKEYR;
-	volatile uint32_t KEYR;
-	volatile uint32_t OPTKEYR;
-	volatile uint32_t SR;
-	volatile uint32_t CR;
-	volatile uint32_t ECCR;
-	uint32_t RESERVED0;
-	volatile uint32_t OPTR;
-	volatile uint32_t PCROP1SR;
-	volatile uint32_t PCROP1ER;
-	volatile uint32_t WRP1AR;
-	volatile uint32_t WRP1BR;
-	uint32_t RESERVED1;
-	uint32_t RESERVED2;
-	uint32_t RESERVED3;
-	uint32_t RESERVED4;
-	volatile uint32_t PCROP2SR;
-	volatile uint32_t PCROP2ER;
-	volatile uint32_t WRP2AR;
-	volatile uint32_t WRP2BR;
-} Flash;
 
 typedef struct
 {
@@ -195,6 +143,69 @@ typedef struct
 
 typedef struct
 {
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t CR3;
+	volatile uint32_t CR4;
+	volatile uint32_t SR1;
+	volatile uint32_t SR2;
+	volatile uint32_t SCR;
+	volatile uint32_t PUCRA;
+	volatile uint32_t PDCRA;
+	volatile uint32_t PUCRB;
+	volatile uint32_t PDCRB;
+	volatile uint32_t PUCRC;
+	volatile uint32_t PDCRC;
+	volatile uint32_t PUCRD;
+	volatile uint32_t PDCRD;
+	volatile uint32_t PUCRE;
+	volatile uint32_t PDCRE;
+	volatile uint32_t PUCRF;
+	volatile uint32_t PDCRF;
+	volatile uint32_t PUCRG;
+	volatile uint32_t PDCRG;
+	volatile uint32_t PUCRH;
+	volatile uint32_t PDCRH;
+	volatile uint32_t PUCRI;
+	volatile uint32_t PDCRI;
+} Power;
+
+typedef struct
+{
+	volatile uint32_t ACR;
+	volatile uint32_t PDKEYR;
+	volatile uint32_t KEYR;
+	volatile uint32_t OPTKEYR;
+	volatile uint32_t SR;
+	volatile uint32_t CR;
+	volatile uint32_t ECCR;
+	uint32_t RESERVED0;
+	volatile uint32_t OPTR;
+	volatile uint32_t PCROP1SR;
+	volatile uint32_t PCROP1ER;
+	volatile uint32_t WRP1AR;
+	volatile uint32_t WRP1BR;
+	uint32_t RESERVED1;
+	uint32_t RESERVED2;
+	uint32_t RESERVED3;
+	uint32_t RESERVED4;
+	volatile uint32_t PCROP2SR;
+	volatile uint32_t PCROP2ER;
+	volatile uint32_t WRP2AR;
+	volatile uint32_t WRP2BR;
+} Flash;
+
+typedef struct
+{
+	uint32_t Pin;
+	uint32_t Mode;
+	uint32_t Speed;
+	uint32_t Pull;
+	uint32_t Alternate;
+} Pin_InitStruct;
+
+typedef struct
+{
 	uint32_t OscType;
 	uint32_t Range;
 	uint32_t State;
@@ -215,16 +226,6 @@ typedef struct
 	uint32_t Prescaler;
 	uint32_t Reload;
 } Tim_InitStruct;
-
-typedef struct
-{
-	uint32_t Pin;
-	uint32_t Mode;
-	uint32_t Speed;
-	uint32_t Pull;
-	uint32_t Alternate;
-} Pin_InitStruct;
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -235,14 +236,32 @@ typedef struct
 #define AHB1_BASE (APB1_BASE + 0x00020000UL)
 #define AHB2_BASE (APB1_BASE + 0x08000000UL)
 
+#define GPIOA_BASE 	(AHB2_BASE + 0x0000UL)
 #define GPIOB_BASE 	(AHB2_BASE + 0x0400UL)
 #define GPIOC_BASE 	(AHB2_BASE + 0x0800UL)
 #define GPIOD_BASE 	(AHB2_BASE + 0x0C00UL)
 #define GPIOE_BASE 	(AHB2_BASE + 0x1000UL)
+#define GPIOF_BASE 	(AHB2_BASE + 0x1400UL)
 #define GPIOG_BASE 	(AHB2_BASE + 0x1800UL)
+#define GPIOH_BASE 	(AHB2_BASE + 0x1C00UL)
+#define GPIOI_BASE 	(AHB2_BASE + 0x2000UL)
 #define RCC_BASE   	(AHB1_BASE + 0x1000UL)
 #define PWR_BASE   	(APB1_BASE + 0x7000UL)
 #define FLASH_BASE 	(AHB1_BASE + 0x2000UL)
+
+#define GPIOA 	((Perph*) GPIOA_BASE)
+#define GPIOB 	((Perph*) GPIOB_BASE)
+#define GPIOC 	((Perph*) GPIOC_BASE)
+#define GPIOD 	((Perph*) GPIOD_BASE)
+#define GPIOE 	((Perph*) GPIOE_BASE)
+#define GPIOF 	((Perph*) GPIOF_BASE)
+#define GPIOG 	((Perph*) GPIOG_BASE)
+#define GPIOH 	((Perph*) GPIOH_BASE)
+#define GPIOI 	((Perph*) GPIOI_BASE)
+#define RCC   	((Clock*) RCC_BASE)
+#define PWR   	((Power*) PWR_BASE)
+#define FLASH 	((Flash*) FLASH_BASE)
+#define TIM2  	((GPTim2_3*) APB1_BASE)
 
 #define GPIO_MODE_INPUT     ((uint32_t) 0x00)
 #define GPIO_MODE_OUTPUT    ((uint32_t) 0x01)
@@ -315,22 +334,12 @@ typedef struct
 #define TIM2_CNT_RELOAD ((uint32_t) 1000)
 #define TIM2_DIER_UIE   (0x1UL << 0)
 
-#define GPIOB 	((Perph*) GPIOB_BASE)
-#define GPIOC 	((Perph*) GPIOC_BASE)
-#define GPIOD 	((Perph*) GPIOD_BASE)
-#define GPIOE 	((Perph*) GPIOE_BASE)
-#define GPIOG 	((Perph*) GPIOG_BASE)
-#define RCC   	((Clock*) RCC_BASE)
-#define PWR   	((Power*) PWR_BASE)
-#define FLASH 	((Flash*) FLASH_BASE)
-#define TIM2  	((GPTim2_3*) APB1_BASE)
-
-#define LPUART1_SRC_PCLK	(0x0UL << 10)
-#define LPUART1_SRC_SYSCLK 	(0x1UL << 10)
-
 #define INSTRUCTION_CACHE_ENABLE 0x1U
 #define DATA_CACHE_ENABLE		 0x1U
 #define PREFETCH_ENABLE			 0x0U
+
+#define LPUART1_SRC_PCLK	(0x0UL << 10)
+#define LPUART1_SRC_SYSCLK 	(0x1UL << 10)
 
 #define NVIC_PRIORITYGROUP_0         ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority, 4 bits for subpriority */
 #define NVIC_PRIORITYGROUP_1         ((uint32_t)0x00000006) /*!< 1 bit  for pre-emption priority, 3 bits for subpriority */
@@ -360,8 +369,15 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-Level level = __Menu;
 volatile uint32_t glTick = 0;
+
+Level level = __Menu;
+bool show = false;
+bool blink = false;
+
+Perph* perph;
+uint16_t pin;
+
 char count[4];
 
 Led leds[11] = {
@@ -400,6 +416,7 @@ void System_Init();
 void Osc_Init(Osc_InitStruct* initstruct);
 void Clk_Init(Clk_InitStruct* initstruct);
 void Tim_Init(Tim_InitStruct* initstruct);
+
 void Clock_Config(void);
 
 void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct);
@@ -408,19 +425,16 @@ uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin);
 void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate);
 void GPIO_TogglePin(Perph* perph, uint16_t pin);
 
-void case_desensitize(char* buff);
+void case_desensitize(char* buff, char pos);
 void flush_buffer(char* buff);
-
 char retrieve_function(char* buff);
-char* retrieve_args(char* buff);
 void execute(char* buff);
-
 void display_help();
 
 void set_leds(char* args, uint16_t state);
 void toggle_leds(char* args);
-void blink(char* args);
 void status_leds(char* args);
+void set_blink(char* args);
 
 void set_displayed_value(char* args);
 void show_number();
@@ -443,10 +457,12 @@ uint32_t GetTick();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	bool show = false;
 	char buff[13];
 	unsigned char pos = 0;
 
+	uint32_t tickstart;
+	bool wait = false;
+	char i = 9;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -478,24 +494,72 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	if(pos == 0)
-	{
-		flush_buffer(buff);
+	  if(pos == 0)
+	  {
+		  flush_buffer(buff);
 
-	}
-	LPUART_ReceiveChar(&buff[pos]);
-	LPUART_SendChar(buff[pos]);
-	pos = (pos + 1)%13;
+	  }
+	  if(!LPUART_ReceiveChar(&buff[pos])) //if a character was successfully received
+	  {
+		  LPUART_SendChar(buff[pos]);
 
-	if(buff[pos] == '\n')
-	{
-		case_desensitize(buff);
-		execute(buff);
-	}
-	if(show)
-	{
-		show_number();
-	}
+		  if(buff[pos] == '\r')
+		  {
+			  LPUART_SendChar('\n');
+			  case_desensitize(buff, pos);
+			  execute(buff);
+			  pos = 0;
+			  LPUART_SendChar('>');
+		  }
+		  else
+		  {
+			  if(buff[pos] == 127 || buff[pos] == 8) //if backspace was sent
+			  {
+				  buff[pos] = '\0';
+				  if(pos > 0)
+				  {
+					  buff[pos - 1] = '\0';
+				  }
+				  (pos > 1)?( pos-- ):( pos = 0 );
+			  }
+			  else
+			  {
+				  pos = (pos + 1)%13;
+			  }
+		  }
+	  }
+
+	  if(blink)
+	  {
+		  if(!wait)
+		  {
+			  if(i > 0)
+			  {
+				  wait = true;
+				  tickstart = GetTick();
+				  GPIO_TogglePin(perph, pin);
+				  i--;
+			  }
+			  else
+			  {
+				  blink = false;
+				  i = 9;
+				  GPIO_TogglePin(perph, pin);
+			  }
+		  }
+		  else
+		  {
+				if((GetTick() - tickstart) > (1000/speed))
+				{
+					wait = false;
+				}
+		  }
+	  }
+
+	  if(show)
+	  {
+		  show_number();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -595,79 +659,21 @@ void GPIO_Init(Perph* perph, Pin_InitStruct* initstruct)
 		cur = initstruct->Pin & (1 << pos);
 		if(cur != 0)
 		{
-			perph->MODER = (perph->MODER & ~(0x3UL << (2 * pos))) | (((initstruct->Mode & ~(0x1UL)) >> 1) << (2 * pos));
+			perph->MODER = (perph->MODER & ~(0x3UL << (2 * pos))) | (((initstruct->Mode & 0xFFFFFFFEUL) >> 1) << (2 * pos));
 			perph->OTYPER = (perph->OTYPER & ~(0x1UL << pos)) | ((initstruct->Mode & 0x01UL) << pos);
 			perph->OSPEEDR = (perph->OSPEEDR & ~(0x3UL << (2 * pos))) | (initstruct->Speed << (2 * pos));
 			perph->PUPDR = (perph->PUPDR & ~(0x3UL << (2 * pos))) | (initstruct->Pull << (2 * pos));
-			if((initstruct->Mode & ~(0x1UL)) == 0x10UL)
+			if(pos < 8)
 			{
-				if(pos < 8)
-				{
-					perph->AFR[0] |= (initstruct->Alternate << 4 * pos);
-				}
-				else
-				{
-					perph->AFR[1] |= (initstruct->Alternate << 4 * (pos - 8));
-				}
+				perph->AFR[0] |= (initstruct->Alternate << 4 * pos);
+			}
+			else
+			{
+				perph->AFR[1] |= (initstruct->Alternate << 4 * (pos - 8));
 			}
 		}
 		pos++;
 	}
-}
-
-uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin)
-{
-	int pos = 0;
-	while(pin != 0x1U)
-	{
-		pin = pin >> 1;
-		pos++;
-	}
-	if(((perph->MODER & (0x3UL << 2 * pos)) >> (2 * pos)) == 0x01UL)
-	{
-		return ((perph->ODR & (0x1UL << pos)) >> pos);
-	}
-	return ((perph->IDR & (0x1UL << pos)) >> pos);
-}
-
-void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
-{
-	uint16_t temp = pin;
-	uint16_t mask = 0x0U;
-	int pos = 0;
-	while(temp > 0)
-	{
-		while((temp & 0x1U) != 0x1U)
-		{
-			temp = temp >> 1;
-			pos++;
-		}
-		if(((perph->MODER & (0x3UL << 2 * pos)) >> (2 * pos)) == 0x01UL)
-		{
-			mask |= (1 << pos);
-		}
-		temp &= ~(0x1U);
-	}
-	pin &= mask;
-	perph->ODR &= ~pin;
-	perph->ODR |= pinstate;
-}
-
-void GPIO_TogglePin(Perph* perph, uint16_t pin)
-{
-	uint16_t temp = pin;
-	uint16_t pinstate = 0x0U;
-	int pos = 0;
-	while(temp > 0)
-	{
-		while((temp & 0x1U) != 0x1U)
-		{
-			temp = temp >> 1;
-			pos++;
-		}
-		pinstate |= ((GPIO_ReadPin(perph, 1 << pos)^0x1UL) << pos);
-	}
-	GPIO_WritePin(perph, pin, pinstate);
 }
 
 void GPIO_Config()
@@ -688,7 +694,7 @@ void GPIO_Config()
 
 	GPIO_Init(GPIOB, &Init_Struct);
 
-	Init_Struct.Pin = (1 << 2)|(1 << 3)|(1 << 4)|(1 << 5);
+	Init_Struct.Pin = (1 << 2)|(1 << 3)|(1 << 4)|(1 << 5)|(1 << 8);
 	Init_Struct.Mode = GPIO_MODE_OUTPUT_PP;
 
 	GPIO_Init(GPIOB, &Init_Struct);
@@ -734,37 +740,68 @@ void GPIO_Config()
 	//GPIOG peripheral init end
 }
 
-void read_joystick(char* args)
+uint32_t GPIO_ReadPin(Perph* perph, uint16_t pin)
 {
-	uint32_t state;
-	if(*(args + 0) == ('l' || 'r' || 'u' || 'd' || 'c'))
+	int pos = 0;
+	while(pin != 0x1U)
 	{
-		switch(*(args + 0))
-		{
-			case 'r':
-				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 0));
-			case 'l':
-				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 1));
-			case 'u':
-				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 3));
-			case 'd':
-				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 2));
-			case 'c':
-				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
-		}
-		LPUART_SendString("State: \0");
-		LPUART_SendString((state)?("On"):("Off"));
-		LPUART_SendString("\n\r\0");
+		pin = pin >> 1;
+		pos++;
 	}
-	else
+	if(((perph->MODER & (0x3UL << 2 * pos)) >> (2 * pos)) == 0x01UL)
 	{
-		LPUART_SendString("Not a valid argument! Type \"HELP\" for more information.\n\r\0");
+		return ((perph->ODR & (0x1UL << pos)) >> pos);
+	}
+	return ((perph->IDR & (0x1UL << pos)) >> pos);
+}
+
+void GPIO_WritePin(Perph* perph, uint16_t pin, uint16_t pinstate)
+{
+	uint16_t temp = pin;
+	uint16_t mask = 0x0U;
+	int pos = 0;
+	while(temp > 0)
+	{
+		while((temp & 0x1U) != 0x1U)
+		{
+			temp = temp >> 1;
+			pos++;
+		}
+		if(((perph->MODER & (0x3UL << 2 * pos)) >> (2 * pos)) == 0x01UL)
+		{
+			mask |= (1 << pos);
+		}
+		temp &= 0xFFFEU;
+	}
+	pin &= mask;
+	perph->ODR &= ~pin;
+	if(pinstate == 0x1U)
+	{
+		perph->ODR |= pin;
 	}
 }
 
-void case_desensitize(char* buff)
+void GPIO_TogglePin(Perph* perph, uint16_t pin)
 {
-	for(char i = 0; i < 13; i++)
+	uint16_t temp = pin;
+	uint16_t pinstate = 0x0U;
+	int pos = 0;
+	while(temp > 0)
+	{
+		while((temp & 0x1U) != 0x1U)
+		{
+			temp = temp >> 1;
+			pos++;
+		}
+		pinstate = GPIO_ReadPin(perph, 1 << pos)^1;
+		temp &= 0xFFFEU;
+	}
+	GPIO_WritePin(perph, pin, pinstate);
+}
+
+void case_desensitize(char* buff, char pos)
+{
+	for(char i = 0; i < pos; i++)
 	{
 		if(*(buff + i) >= 65 && *(buff + i) <= 90)
 		{
@@ -783,53 +820,68 @@ void flush_buffer(char* buff)
 
 char retrieve_function(char* buff)
 {
-	char command;
-	unsigned char i;
+	unsigned char i, end1, end2;
+	unsigned char command;
 	char *commands[13] = {
-			"help",
-			"led",
-			"7led",
-			"joy",
-			"lpuart",
-			"up",
-			"set",
-			"clear",
-			"blink",
-			"toggle",
-			"display",
-			"read",
-			"status"
+			"help\0",
+			"led\0",
+			"7led\0",
+			"joy\0",
+			"lpuart\0",
+			"up\0",
+			"set\0",
+			"clear\0",
+			"blink\0",
+			"toggle\0",
+			"display\0",
+			"read\0",
+			"status\0"
 	};
 	for(unsigned char k = 0; k < 13; k++)
 	{
 		command = k;
 		i = 0;
-		while(*(buff + i) != '\n')
+		end1 = 0;
+		end2 = 0;
+		while(1)
 		{
-			if(sizeof(*commands[k])/sizeof(char) < i)
+			if(*(commands[k] + i) == '\0')
 			{
-				command = -1;
+				end1 = 1;
+			}
+			if(*(buff + i) == ' ' || *(buff + i) == '\r')
+			{
+				end2 = 1;
+			}
+
+			if(end1^end2)
+			{
+				command = Invalid;
 				break;
 			}
-			if(*(commands[k] + i) != *(buff + i))
+			else if(end1&end2)
 			{
-				command = -1;
+				break;
+			}
+			else if(*(commands[k] + i) != *(buff + i))
+			{
+				command = Invalid;
 				break;
 			}
 			i++;
 		}
-		if(command != -1)
+		if(command != Invalid)
 		{
 			return command;
 		}
 	}
-	return -1;
+	return Invalid;
 }
 
 void execute(char* buff)
 {
-	char command;
-	if((command = retrieve_function(buff)) != -1)
+	unsigned char command;
+	if((command = retrieve_function(buff)) != Invalid)
 	{
 		unsigned char i = 0;
 		char args[4] = {'\0','\0','\0','\0'};
@@ -837,7 +889,7 @@ void execute(char* buff)
 		i++;
 		for(unsigned char k = i; k < 13; k++)
 		{
-			if(*(buff + k) == '\n')
+			if(*(buff + k) == '\r')
 			{
 				break;
 			}
@@ -851,6 +903,18 @@ void execute(char* buff)
 					case HELP:
 						display_help();
 						break;
+					case LED:
+						level = __LED;
+						break;
+					case LED7:
+						level = __LED7;
+						break;
+					case Joy:
+						level = __Joy;
+						break;
+					case LPUART:
+						level = __LPUART;
+						break;
 					default:
 						LPUART_SendString("You cannot use this command here! Type \"HELP\" for more information.\n\r\0");
 						break;
@@ -862,6 +926,9 @@ void execute(char* buff)
 					case HELP:
 						display_help();
 						break;
+					case UP:
+						level = __Menu;
+						break;
 					case Set:
 						set_leds(args, 0x1U);
 						break;
@@ -869,7 +936,7 @@ void execute(char* buff)
 						set_leds(args, 0x0U);
 						break;
 					case Blink:
-						blink(args);
+						set_blink(args);
 						break;
 					case Status:
 						status_leds(args);
@@ -888,6 +955,9 @@ void execute(char* buff)
 					case HELP:
 						display_help();
 						break;
+					case UP:
+						level = __Menu;
+						break;
 					case Display:
 						set_displayed_value(args);
 						break;
@@ -905,6 +975,9 @@ void execute(char* buff)
 					case HELP:
 						display_help();
 						break;
+					case UP:
+						level = __Menu;
+						break;
 					case Read:
 						read_joystick(args);
 						break;
@@ -918,6 +991,9 @@ void execute(char* buff)
 				{
 					case HELP:
 						display_help();
+						break;
+					case UP:
+						level = __Menu;
 						break;
 					case Status:
 						lpuart_status();
@@ -941,8 +1017,10 @@ void display_help()
 	{
 		case __Menu:
 			LPUART_SendString("Top level\n\r\0");
+			LPUART_SendString("(LED|7LED|Joy|LPUART)\tGo to the respective level\n\r\0");
 			break;
 		case __LED:
+			LPUART_SendString("UP\tGo up one level\n\r\0");
 			LPUART_SendString("Set <id>\tTurn on LED (id: 0-7 or R,G,B)\n\r\0");
 			LPUART_SendString("Clear <id>\tTurn off LED (id: 0-7 or R,G,B)\n\r\0");
 			LPUART_SendString("Blink <id>\tBlink LED five times (id: 0-7 or R,G,B)\n\r\0");
@@ -950,14 +1028,17 @@ void display_help()
 			LPUART_SendString("Toggle <id>\tInvert LED state (id: 0-7 or R,G,B)\n\r\0");
 			break;
 		case __LED7:
+			LPUART_SendString("UP\tGo up one level\n\r\0");
 			LPUART_SendString("Display <val>\tDisplay number from 0 to 9999 on the 7-LED display\n\r\0");
 			LPUART_SendString("Read\tDisplay on the terminal the number from 7-LED display\n\r\0");
 			break;
 		case __Joy:
+			LPUART_SendString("UP\tGo up one level\n\r\0");
 			LPUART_SendString("Read <id>\tDisplay on the terminal the current state of joystick buttons\n\r\0");
 			LPUART_SendString("\t\t(id: L – left, R – right, U – up, D – down, C - center)\n\r\0");
 			break;
 		case __LPUART:
+			LPUART_SendString("UP\tGo up one level\n\r\0");
 			LPUART_SendString("Status\tDisplay baudrate, number of databits and parity bits,\n\r\0");
 			LPUART_SendString("\t\tinformations read from registers and then calculated baudrate\n\r\0");
 			break;
@@ -970,7 +1051,7 @@ void set_leds(char* args, uint16_t state)
 	{
 		GPIO_WritePin(leds[*(args + 0) - 48].perph, leds[*(args + 0) - 48].number, state);
 	}
-	else if(*(args + 0) == ('r' || 'g' || 'b'))
+	else if(*(args + 0) == 'r' || *(args + 0) == 'g' || *(args + 0) == 'b')
 	{
 		switch(*(args + 0))
 		{
@@ -997,7 +1078,7 @@ void toggle_leds(char* args)
 	{
 		GPIO_TogglePin(leds[*(args + 0) - 48].perph, leds[*(args + 0) - 48].number);
 	}
-	else if(*(args + 0) == ('r' || 'g' || 'b'))
+	else if(*(args + 0) == 'r' || *(args + 0) == 'g' || *(args + 0) == 'b')
 	{
 		switch(*(args + 0))
 		{
@@ -1036,10 +1117,10 @@ void status_leds(char* args)
 			LPUART_SendString("Off\n\r\0");
 		}
 	}
-	else if(*(args + 0) == ('r' || 'g' || 'b'))
+	else if(*(args + 0) == 'r' || *(args + 0) == 'g' || *(args + 0) == 'b')
 	{
 		LPUART_SendString("Status of LED \0");
-		LPUART_SendChar(*(args + 0));
+		LPUART_SendChar(*(args + 0) - 32);
 		LPUART_SendString(" : \0");
 		switch(*(args + 0))
 		{
@@ -1068,17 +1149,15 @@ void status_leds(char* args)
 	}
 }
 
-void blink(char* args)
+void set_blink(char* args)
 {
-	Perph* perph;
-	uint16_t pin;
-
+	blink = true;
 	if(*(args + 0) >= 48 && *(args + 0) <= 55)
 	{
 		perph = leds[*(args + 0) - 48].perph;
 		pin = leds[*(args + 0) - 48].number;
 	}
-	else if(*(args + 0) == ('r' || 'g' || 'b'))
+	else if(*(args + 0) == 'r' || *(args + 0) == 'g' || *(args + 0) == 'b')
 	{
 		switch(*(args + 0))
 		{
@@ -1101,29 +1180,25 @@ void blink(char* args)
 		LPUART_SendString("Not a valid argument! Type \"HELP\" for more information.\n\r\0");
 		return;
 	}
-
-	uint32_t tickstart;
-	bool wait = false;
-	for(char i = 0; i < 5; i++)
-	{
-		tickstart = GetTick();
-		wait = true;
-		GPIO_TogglePin(perph, pin);
-		while(wait)
-		{
-			if((GetTick() - tickstart) > (1000/speed))
-			{
-				wait = false;
-				GPIO_TogglePin(perph, pin);
-			}
-		}
-	}
 }
 
 void set_displayed_value(char* args)
 {
-	for(char i = 0; i < 4; i++)
+	if(!show)
 	{
+		show = true;
+	}
+	for(unsigned char i = 0; i < 4; i++)
+	{
+		count[i] = '\0';
+	}
+
+	for(unsigned char i = 0; i < 4; i++)
+	{
+		if(*(args + i) == '\0')
+		{
+			break;
+		}
 		if(*(args + i) < 48 || *(args + i) > 57)
 		{
 			LPUART_SendString("Not a valid argument! Type \"HELP\" for more information.\n\r\0");
@@ -1132,6 +1207,10 @@ void set_displayed_value(char* args)
 	}
 	for(unsigned char i = 0; i < 4; i++)
 	{
+		if(*(args + i) == '\0')
+		{
+			break;
+		}
 		count[i] = *(args + i);
 	}
 }
@@ -1139,19 +1218,21 @@ void set_displayed_value(char* args)
 void show_number()
 {
 	bool wait = false;
-	for(int digit = 4; digit > 0; digit--)
+	int i = 4;
+	while(count[i - 1] == '\0') {i--;}
+	for(int digit = i; digit > 0; digit--)
 	{
 		wait = !wait;
 		uint32_t tickstart = GetTick();
-		GPIO_WritePin(GPIOG, *(digits + (count[digit] - 48)*sizeof(uint16_t)/2), 0x1U);
-		GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x1U);
+		GPIO_WritePin(GPIOG, *(digits + (count[digit - 1] - 48)*sizeof(uint16_t)/2), 0x1U);
+		GPIO_WritePin(GPIOB, ((uint16_t) 1 << (5 - i + digit)), 0x1U);
 		while(wait)
 		{
 			if(GetTick()-tickstart >= 5)
 			{
 				wait = !wait;
 				GPIO_WritePin(GPIOG, ((uint16_t) 1 << 16) - 1, 0x0U);
-				GPIO_WritePin(GPIOB, ((uint16_t) 1 << (digit + 1)), 0x0U);
+				GPIO_WritePin(GPIOB, ((uint16_t) 1 << (5 - i + digit)), 0x0U);
 			}
 		}
 	}
@@ -1160,11 +1241,55 @@ void show_number()
 void read_number()
 {
 	LPUART_SendString("Displayed number: \0");
-	for(unsigned char i = 0; i < 4; i++)
+	if(show)
 	{
-		LPUART_SendChar(count[i]);
+		for(unsigned char i = 0; i < 4; i++)
+		{
+			if(count[i] == '\0')
+			{
+				break;
+			}
+			LPUART_SendChar(count[i]);
+		}
+	}
+	else
+	{
+		LPUART_SendString("None\0");
 	}
 	LPUART_SendString("\n\r\0");
+}
+
+void read_joystick(char* args)
+{
+	uint32_t state;
+	if(*(args + 0) == 'l' || *(args + 0) == 'r' || *(args + 0) == 'u' || *(args + 0) == 'd' || *(args + 0) == 'c')
+	{
+		switch(*(args + 0))
+		{
+			case 'r':
+				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 0));
+				break;
+			case 'l':
+				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 1));
+				break;
+			case 'u':
+				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 3));
+				break;
+			case 'd':
+				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 2));
+				break;
+			case 'c':
+				state = GPIO_ReadPin(GPIOE, (uint16_t) (1 << 15));
+				break;
+		}
+		LPUART_SendString("State: \0");
+		LPUART_SendString((state)?("Off"):("On")); //by default the pin is connected to Vcc
+		LPUART_SendString("\n\r\0");
+	}
+	else
+	{
+		LPUART_SendString("Not a valid argument! Type \"HELP\" for more information.\n\r\0");
+	}
 }
 
 uint32_t GetTick()

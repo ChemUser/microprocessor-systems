@@ -54,9 +54,14 @@ int LPUART_init(void)
 	LPUART1->CR1 |= WORD_8B;
 	LPUART1->CR2 |= STOP_1B;
 	LPUART1->BRR = (256 * 4000000)/115200;
-	LPUART1->CR1 |= 0x1UL;
-	LPUART1->CR1 |= (0x1UL << 3);
-	LPUART1->CR1 |= (0x1UL << 2);
+	LPUART1->CR1 |= 0x1UL;		  //LPUART enable
+
+	//LPUART1->CR1 |= (0x1UL << 5); 	  	 //RXNE interrupt enable
+	//NVIC_SetPriority(LPUART1_IRQn, 0x1); //Enable the NVIC interrupt for LPUART1
+	//NVIC_EnableIRQ(LPUART1_IRQn);
+
+	LPUART1->CR1 |= (0x1UL << 3); //Transmitter enable
+	LPUART1->CR1 |= (0x1UL << 2); //Receiver enable
 	return 0;
 }
 
@@ -72,9 +77,12 @@ int LPUART_SendChar(char data)
 //	Receive single character
 int LPUART_ReceiveChar(char* data)
 {
-	while(RXNE != 1){continue;}
-	*data = LPUART1->RDR;
-	return 0;
+	if(RXNE == 1)
+	{
+		*data = LPUART1->RDR;
+		return 0;
+	}
+	return 1;
 }
 
 //	Send string
@@ -121,16 +129,15 @@ void lpuart_status()
 			LPUART_SendString("no parity.\n\r\t\0");
 			break;
 	}
-	LPUART_SendString("Transmit register: \"\0");
+	LPUART_SendString("Transmit register: \0");
 	LPUART_SendChar(LPUART1->TDR);
-	LPUART_SendString("\"\n\r\tReceive register: \"\0");
+	LPUART_SendString("\n\r\tReceive register: \0");
 	LPUART_SendChar(LPUART1->RDR);
-	LPUART_SendString("\"\n\r\tCalculated baudrate: \0");
-
+	LPUART_SendString("\n\r\tCalculated baudrate: \0");
 
 	baudrate = (uint32_t) (256*4000000/LPUART1->BRR);
 	char buff[10];
-	unsigned i;
+	short i;
 	for(i = 0; i < 10; i++){ buff[i] = '\0'; }
 	i = 0;
 	while(baudrate != 0)
@@ -140,6 +147,10 @@ void lpuart_status()
 		i++;
 	}
 	i--;
-	for(; i >= 0; i--){ LPUART_SendChar(buff[i]); }
+	while(i >= 0)
+	{
+		LPUART_SendChar(buff[i]);
+		i--;
+	}
 	LPUART_SendString("\n\r\0");
 }
